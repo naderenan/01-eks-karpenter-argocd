@@ -1,0 +1,49 @@
+flowchart LR
+    dev["DevOps Engineer<br/>terraform apply"]
+    git["Git Repository<br/>(desired state)"]
+
+    subgraph AWS["AWS Cloud - us-east-1"]
+        subgraph VPC["VPC 10.0.0.0/16 - 3 Availability Zones"]
+            subgraph PUB["Public Subnets"]
+                nat["NAT Gateway"]
+            end
+            subgraph PRIV["Private Subnets - tag karpenter.sh/discovery"]
+                subgraph EKS["Amazon EKS 1.35"]
+                    sys["Managed Node Group<br/>2x m7i-flex.large<br/>CoreDNS, Karpenter, ArgoCD"]
+                    karp["Karpenter Controller<br/>Pod Identity"]
+                    argo["ArgoCD<br/>GitOps controller"]
+                    spot["Karpenter Nodes<br/>Spot-first / free-tier types<br/>auto-consolidated"]
+                    app["Guestbook App<br/>synced from Git"]
+                end
+            end
+        end
+        cp["EKS Control Plane<br/>audit + API logs to CloudWatch"]
+        sqs["SQS Interruption Queue"]
+        eb["EventBridge<br/>Spot interruption, rebalance,<br/>instance state change"]
+        iam["IAM<br/>Pod Identity roles,<br/>Karpenter node role, SSM"]
+        ec2["EC2 Fleet API"]
+    end
+
+    dev -->|Terraform| cp
+    cp --- sys
+    karp -->|launch / terminate| ec2
+    ec2 --> spot
+    eb --> sqs --> karp
+    iam -.-> karp
+    git -->|pull| argo
+    argo -->|sync + self-heal| app
+    app --> spot
+    sys --> nat
+    spot --> nat
+
+    classDef aws fill:#FF9900,stroke:#232F3E,color:#232F3E
+    classDef k8s fill:#326CE5,stroke:#1d3f8a,color:#ffffff
+    classDef ext fill:#f4f4f4,stroke:#555,color:#111
+    class cp,sqs,eb,iam,ec2,nat aws
+    class sys,karp,argo,spot,app k8s
+    class dev,git ext
+    style AWS fill:#ffffff,stroke:#232F3E,stroke-width:2px
+    style VPC fill:#f2f8ff,stroke:#147EBA,stroke-width:2px
+    style PUB fill:#e9f7ec,stroke:#248814
+    style PRIV fill:#e8f1fb,stroke:#147EBA
+    style EKS fill:#ffffff,stroke:#326CE5,stroke-dasharray:4 3

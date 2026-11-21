@@ -1,0 +1,21 @@
+.terraform/
+.terraform.lock.hcl.bak
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+terraform.tfvars
+.DS_Store
+# local run artifacts (contain account IDs / logs)
+.autopilot/
+out/
+deploy-log.txt
+diagnose*.txt
+vpc-*.txt
+budget-result.txt
+# personal one-off account scripts (contain email / resource IDs)
+scripts/set-budget.ps1
+scripts/list-vpcs.ps1
+scripts/delete-vpcs.ps1
+scripts/diagnose*.ps1
+build/
